@@ -264,9 +264,9 @@ window.__selftest=Object.assign(runSelfTests,Rules,{run:runSelfTests});
     $('add').disabled=g.phase!=='playing'||g.used>=5;
     $('hint').disabled=g.phase!=='playing';
     $('undo').disabled=!g.undo||!['playing','cleared'].includes(g.phase);
-    $('restart').textContent=g.phase==='ready'?'3分を開始':'はじめから';
+    $('restart').textContent=g.phase==='cleared'?'次のゲーム':g.phase==='ready'?'3分を開始':'はじめから';
     let status=message;
-    if(g.phase==='cleared')status=`クリア！ ${g.pairs}ペアを消しました。`;
+    if(g.phase==='cleared')status=`クリア！ ${g.pairs}ペアを消しました。次のゲームへ進めます。`;
     else if(g.phase==='ended')status=`時間終了！ 記録は${g.pairs}ペア。`;
     else if(g.phase==='ready')status='「3分を開始」でスタート。';
     else if(!status&&selected!==null)status=`${g.board[selected]}を選択中（${Math.floor(selected/9)+1}行${selected%9+1}列）。相手を選ぼう。`;
@@ -307,7 +307,9 @@ window.__selftest=Object.assign(runSelfTests,Rules,{run:runSelfTests});
   $('prev').onclick=()=>turnPage(-1);$('next').onclick=()=>turnPage(1);
   document.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>{synchronize();data.mode=button.dataset.mode;selected=null;hinted=[];message='';render();save();});
   $('restart').onclick=()=>{
-    synchronize();if(game().phase==='ready'){game().phase='playing';game().deadline=Date.now()+180000;message='';render();save();}
+    synchronize();
+    if(game().phase==='cleared'){record(data.mode,game());data.games[data.mode]=fresh(data.mode);selected=null;hinted=[];message='';render();save();}
+    else if(game().phase==='ready'){game().phase='playing';game().deadline=Date.now()+180000;message='';render();save();}
     else $('restart-dialog').showModal();
   };
   $('confirm-restart').onclick=()=>{record(data.mode,game());data.games[data.mode]=fresh(data.mode);selected=null;hinted=[];message='';$('restart-dialog').close();render();save();};
