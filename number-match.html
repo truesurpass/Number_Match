@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ナンバーマッチ">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f4f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#172420" media="(prefers-color-scheme: dark)">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; manifest-src data: blob:; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<link id="manifest" rel="manifest">
+<title>ナンバーマッチ</title>
+<style>
+:root{color-scheme:light dark;--bg:#f4f3ec;--surface:#fffef9;--ink:#203c33;--muted:#59675e;--line:#d8ddd2;--accent:#226347;--on-accent:#fff;--soft:#e2eddf;--hint:#f5e1a4;--hint-ink:#59430d;--danger:#aa392c;--cell-h:48px;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#172420;--surface:#20332b;--ink:#edf1e8;--muted:#b3c2b5;--line:#40564a;--accent:#a9d8b0;--on-accent:#172b20;--soft:#304d39;--hint:#624f20;--hint-ink:#ffe7a1;--danger:#ffb0a1}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:var(--bg);color:var(--ink);touch-action:manipulation}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;min-width:44px;min-height:44px;border:0;background:none;padding:8px 12px}
+button:disabled{cursor:default;color:var(--muted);opacity:.48}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+button:active:not(:disabled){background:var(--soft)}
+[hidden]{display:none!important}
+.app{height:100vh;height:100dvh;max-width:480px;margin:auto;display:flex;flex-direction:column;gap:10px;padding:max(8px,env(safe-area-inset-top)) max(3px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(3px,env(safe-area-inset-left))}
+header,.inset{padding:0 13px}
+header{display:flex;align-items:center;justify-content:space-between;min-height:52px;flex-shrink:0}
+h1{font-size:23px;letter-spacing:-.035em;margin:0;font-weight:750}
+.help{border:1px solid var(--line);border-radius:50%;padding:0;width:44px;font-size:20px}
+.modes{display:flex;border-bottom:1px solid var(--line);margin:0 13px;flex-shrink:0}
+.modes button{flex:1;font-size:13px;white-space:nowrap;padding:10px 2px;border-bottom:3px solid transparent}
+.modes button[aria-pressed=true]{border-bottom-color:var(--accent);color:var(--accent);font-weight:700}
+.stats{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:67px;flex-shrink:0}
+.stat-label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+.stat-value{font-size:28px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.025em}
+.unit{font-size:13px;margin-left:5px;font-weight:400;color:var(--muted)}
+.right{text-align:right}
+.right .stat-value{font-size:22px}
+.urgent{color:var(--danger)}
+.board-area{flex:1;min-height:144px;position:relative;overflow:hidden}
+.board{display:grid;grid-template-columns:repeat(9,minmax(44px,1fr));grid-auto-rows:var(--cell-h);align-content:start;width:100%}
+.cell{border-radius:0;padding:0;min-width:44px;height:var(--cell-h);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums;background:var(--surface);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.cell:nth-child(9n){border-right:0}
+.cell.empty{background:transparent;position:relative}
+.cell.empty:after{content:"";width:3px;height:3px;border-radius:50%;background:var(--line);position:absolute;left:50%;top:50%}
+.cell.selected{background:var(--accent);color:var(--on-accent);font-weight:750;box-shadow:inset 0 0 0 3px var(--accent)}
+.cell.hinted{background:var(--hint);color:var(--hint-ink);box-shadow:inset 0 0 0 2px var(--hint-ink)}
+.cell.selected.hinted{background:var(--accent);color:var(--on-accent)}
+.board.cleared{animation:erase .18s ease-out}
+@keyframes erase{from{opacity:.6}to{opacity:1}}
+.empty-board{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:20px;pointer-events:none}
+.empty-board strong{font-size:32px;letter-spacing:-.03em}
+.empty-board p{font-size:14px;color:var(--muted)}
+.page-nav{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:0 13px;flex-shrink:0;min-height:44px}
+.page-nav button{border:1px solid var(--line);border-radius:10px;min-width:60px}
+#page-label{font-size:12px;font-variant-numeric:tabular-nums;text-align:center;line-height:1.5;color:var(--muted)}
+#status{font-size:13px;line-height:1.45;min-height:38px;max-height:42px;margin:0;padding:0 13px;display:flex;align-items:center;justify-content:center;text-align:center;flex-shrink:0}
+.actions{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:8px;padding:0 13px;flex-shrink:0}
+.actions button{border:1px solid var(--line);border-radius:14px;min-height:58px;font-size:14px;font-weight:600}
+.actions #add{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.actions #add:disabled{background:var(--soft);color:var(--muted);border-color:var(--line)}
+.plus{font-size:24px;vertical-align:-2px;margin-right:5px;font-weight:400}
+.footer{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:0 8px;flex-shrink:0;min-height:44px}
+.footer button{font-size:12px;color:var(--muted);padding:8px}
+#storage-note{font-size:10px;color:var(--muted);max-width:118px;text-align:center}
+#selftest{margin:0 10px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:10px;line-height:1.45;flex-shrink:0}
+#selftest strong{display:block;color:var(--accent);font-size:12px}
+#selftest.failed strong{color:var(--danger)}
+dialog{color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:22px;width:min(360px,calc(100% - 28px));max-height:85dvh;overflow:auto;overscroll-behavior:contain}
+dialog::backdrop{background:rgb(0 0 0 / .4)}
+dialog h2{font-size:21px;margin:0 0 16px;letter-spacing:-.025em}
+dialog p{font-size:14px;line-height:1.7;margin:10px 0}
+dialog .close{display:block;width:100%;background:var(--accent);color:var(--on-accent);border-radius:10px;margin-top:18px}
+.dialog-actions{display:flex;gap:8px;margin-top:16px}.dialog-actions button{flex:1;border:1px solid var(--line);border-radius:10px}
+.history-row{display:flex;justify-content:space-between;font-size:13px;padding:12px 0;border-bottom:1px solid var(--line)}
+@media(max-height:740px){.app{gap:5px}header{min-height:44px}.stats{min-height:54px}.stat-value{font-size:24px}.actions button{min-height:48px}h1{font-size:21px}}
+@media(prefers-reduced-motion:reduce){.board.cleared{animation:none}}
+</style>
+</head>
+<body>
+<main class="app">
+  <section id="selftest" hidden aria-label="自己診断"></section>
+  <header><h1>ナンバーマッチ</h1><button id="help" class="help" aria-label="遊び方">?</button></header>
+  <nav class="modes" aria-label="ゲームモード">
+    <button data-mode="normal" aria-pressed="true">ノーマル</button>
+    <button data-mode="time" aria-pressed="false">タイムアタック</button>
+    <button data-mode="daily" aria-pressed="false">デイリー</button>
+  </nav>
+  <section class="stats inset" aria-label="記録">
+    <div><span class="stat-label" id="score-label">消したペア</span><span id="score" class="stat-value">0</span><span class="unit">ペア</span></div>
+    <div class="right"><span class="stat-label" id="detail-label">ベスト</span><span id="detail" class="stat-value">0</span></div>
+  </section>
+  <div class="board-area" id="board-area">
+    <div id="board" class="board" role="group" aria-label="9列の数字盤面"></div>
+    <div id="empty-board" class="empty-board" hidden><strong>クリア！</strong><p>すべての数字が、ぴったり。</p></div>
+  </div>
+  <nav class="page-nav" aria-label="盤面のページ"><button id="prev" aria-label="前のページ">前へ</button><span id="page-label"></span><button id="next" aria-label="次のページ">次へ</button></nav>
+  <p id="status" role="status" aria-live="polite">同じ数字、または足して10を選ぼう。</p>
+  <div class="actions"><button id="undo">1手戻す</button><button id="add" aria-label="残った数字を追加"><span class="plus">＋</span><span id="add-label">追加 5</span></button><button id="hint">ヒント</button></div>
+  <footer class="footer"><button id="restart">はじめから</button><span id="storage-note">この端末に自動保存</span><button id="history">デイリー履歴</button></footer>
+</main>
+<dialog id="help-dialog" aria-labelledby="help-title">
+  <h2 id="help-title">ふたつ選んで、消そう。</h2>
+  <p><b>同じ数字</b>、または<b>合計10</b>のペアをタップ。</p>
+  <p>横・縦・斜めの直線上で、間が空いていればつながります。行の最後と次の行の先頭もつながります。</p>
+  <p>＋で残った数字を末尾に追加（5回まで）。空の行は詰まり、全消しでクリア。ページを替えても選択は残ります。</p>
+  <p>タイムアタックは3分間のペア数に挑戦。開始後はアプリを閉じても時間が進みます。デイリーは端末の日付で毎日同じ盤面。</p>
+  <p>Safariの共有から「ホーム画面に追加」で起動できます。保存できない環境では画面下部に表示します。</p>
+  <button class="close" data-close>遊ぶ</button>
+</dialog>
+<dialog id="restart-dialog" aria-labelledby="restart-title"><h2 id="restart-title">はじめから遊びますか？</h2><p>このモードの進行状況をリセットします。ベスト記録とデイリー履歴は残ります。</p><div class="dialog-actions"><button data-close>続ける</button><button id="confirm-restart">はじめから</button></div></dialog>
+<dialog id="history-dialog" aria-labelledby="history-title"><h2 id="history-title">デイリー履歴</h2><div id="history-list"></div><div class="page-nav"><button id="history-prev">前へ</button><span id="history-page"></span><button id="history-next">次へ</button></div><button class="close" data-close>閉じる</button></dialog>
+<script>
+'use strict';
+/* Pure rules: null denotes an erased cell; indices are zero-based.
+   A single file cannot register a Safari service worker via a blob/data URL.
+   No service worker or network request is attempted; keep this HTML for local use. */
+const Rules = (() => {
+  const COLS = 9;
+  const initialBoard = () => Array.from({length:19},(_,i)=>i+1).filter(n=>n!==10).join('').split('').map(Number);
+  function dailyBoard(date) {
+    const board=initialBoard(); let seed=2166136261;
+    for(const ch of date) seed=Math.imul(seed^ch.charCodeAt(0),16777619)>>>0;
+    const random=()=>{seed=(seed+0x6D2B79F5)>>>0;let t=seed;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296;};
+    for(let i=board.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[board[i],board[j]]=[board[j],board[i]];}
+    return board;
+  }
+  function adjacent(board,a,b) {
+    if(!Number.isInteger(a)||!Number.isInteger(b)||a===b||a<0||b<0||a>=board.length||b>=board.length||board[a]==null||board[b]==null) return false;
+    if(a>b) [a,b]=[b,a];
+    let clear=true;
+    for(let i=a+1;i<b;i++) if(board[i]!=null){clear=false;break;}
+    if(clear) return true;
+    const ar=Math.floor(a/COLS),br=Math.floor(b/COLS),ac=a%COLS,bc=b%COLS;
+    const dr=br-ar,dc=bc-ac;
+    if(dr===0||(dc!==0&&Math.abs(dc)!==dr)) return false;
+    const step=COLS+Math.sign(dc);
+    for(let i=a+step;i<b;i+=step) if(board[i]!=null) return false;
+    return true;
+  }
+  const canMatch=(board,a,b)=>adjacent(board,a,b)&&(board[a]===board[b]||board[a]+board[b]===10);
+  function compactRows(board) {
+    const result=[];
+    for(let i=0;i<board.length;i+=COLS){const row=board.slice(i,i+COLS);if(row.some(v=>v!=null))result.push(...row);}
+    return result;
+  }
+  function removePair(board,a,b) {
+    if(!canMatch(board,a,b)) return board.slice();
+    const next=board.slice();next[a]=null;next[b]=null;return compactRows(next);
+  }
+  function addNumbers(board,used=0) {
+    if(!Number.isInteger(used)||used<0||used>=5) return {board:board.slice(),used};
+    const remaining=board.filter(v=>v!=null);
+    return {board:board.concat(remaining),used:used+(remaining.length?1:0)};
+  }
+  function findPair(board) {
+    for(let a=0;a<board.length;a++){
+      if(board[a]==null)continue;
+      for(let b=a+1;b<board.length;b++){if(board[b]!=null){if(canMatch(board,a,b))return [a,b];break;}}
+      const r=Math.floor(a/COLS),c=a%COLS;
+      for(const dc of [-1,0,1]) for(let rr=r+1,cc=c+dc;cc>=0&&cc<COLS&&rr*COLS+cc<board.length;rr++,cc+=dc){
+        const b=rr*COLS+cc;if(board[b]!=null){if(canMatch(board,a,b))return [a,b];break;}
+      }
+    }
+    return null;
+  }
+  return Object.freeze({COLS,initialBoard,dailyBoard,adjacent,canMatch,compactRows,removePair,addNumbers,findPair});
+})();
+function runSelfTests() {
+  const tests=[];
+  const test=(name,fn)=>{try{if(!fn())throw Error('assertion');tests.push({name,pass:true});}catch(e){tests.push({name,pass:false,error:e.message});}};
+  const board=(length,entries)=>Object.assign(Array(length).fill(null),entries);
+  test('初期27セル',()=>Rules.initialBoard().join('')==='123456789111213141516171819');
+  test('隣接判定',()=>Rules.adjacent([2,null,2],0,2)&&!Rules.adjacent([2,3,2],0,2)&&Rules.adjacent(board(19,{0:2,18:2}),0,18)&&Rules.adjacent(board(21,{0:2,20:2}),0,20)&&Rules.adjacent(board(25,{8:2,24:2}),8,24)&&!Rules.adjacent(board(21,{0:2,10:3,20:2}),0,20)&&!Rules.adjacent([1],0,0));
+  test('行折り返し',()=>Rules.canMatch(board(10,{8:3,9:7}),8,9)&&Rules.canMatch(board(12,{7:3,11:7}),7,11)&&!Rules.adjacent(board(12,{7:3,9:1,11:7}),7,11));
+  test('合計10・同数',()=>Rules.canMatch([3,7],0,1)&&Rules.canMatch([6,6],0,1)&&!Rules.canMatch([2,7],0,1));
+  test('追加後の盤面長',()=>{const a=Rules.addNumbers([1,null,2],0);return a.board.join(',')==='1,,2,1,2'&&a.used===1&&Rules.addNumbers(a.board,5).board.length===5&&Rules.addNumbers(Rules.initialBoard(),0).board.length===54;});
+  test('行削除・全消し',()=>{const b=board(11,{0:5,8:5,9:2,10:3});return Rules.removePair(b,0,8).join(',')==='2,3'&&Rules.removePair([5,5],0,1).length===0&&Rules.compactRows([1,...Array(8).fill(null),null]).length===9;});
+  test('デイリー再現性',()=>{const a=Rules.dailyBoard('2026-09-05');return a.join()===Rules.dailyBoard('2026-09-05').join()&&a.join()!==Rules.dailyBoard('2026-09-06').join()&&a.slice().sort().join()===Rules.initialBoard().sort().join();});
+  test('純関数・ヒント',()=>{const a=[2,null,8],before=JSON.stringify(a);Rules.removePair(a,0,2);Rules.addNumbers(a);return JSON.stringify(a)===before&&Rules.findPair(a).join()==='0,2'&&Rules.findPair([1,2,3])===null;});
+  return {pass:tests.every(t=>t.pass),tests};
+}
+window.__selftest=Object.assign(runSelfTests,Rules,{run:runSelfTests});
+
+(() => {
+  const $=id=>document.getElementById(id),MODES=['normal','time','daily'];
+  const testing=new URLSearchParams(location.search).get('selftest')==='1';
+  const KEY='number-match.v1'+(testing?'.selftest':'');
+  const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+  const fresh=mode=>({board:mode==='daily'?Rules.dailyBoard(today()):Rules.initialBoard(),used:0,pairs:0,date:today(),phase:mode==='time'?'ready':'playing',deadline:null,undo:null,page:0});
+  const defaults=()=>({version:1,mode:'normal',games:{},best:{normal:0,time:0,daily:0},daily:{}});
+  const validBoard=b=>Array.isArray(b)&&b.length<=864&&Array.from(b).every(v=>v===null||(Number.isInteger(v)&&v>=1&&v<=9));
+  const validGame=g=>g&&validBoard(g.board)&&Number.isInteger(g.used)&&g.used>=0&&g.used<=5&&Number.isInteger(g.pairs)&&g.pairs>=0&&g.pairs<=864&&/^\d{4}-\d{2}-\d{2}$/.test(g.date)&&['ready','playing','cleared','ended'].includes(g.phase)&&(g.deadline===null||(Number.isFinite(g.deadline)&&g.deadline>0));
+  let data=defaults(),storageOK=true;
+  try {
+    const raw=JSON.parse(localStorage.getItem(KEY));
+    if(raw&&raw.version===1){
+      if(MODES.includes(raw.mode))data.mode=raw.mode;
+      for(const mode of MODES){
+        const g=raw.games?.[mode];
+        if(validGame(g)&&!(mode==='time'&&g.phase==='playing'&&g.deadline===null)){
+          data.games[mode]=g;g.page=Number.isInteger(g.page)&&g.page>=0?g.page:0;
+          if(!validGame(g.undo))g.undo=null;else g.undo.undo=null;
+        }
+        if(Number.isInteger(raw.best?.[mode])&&raw.best[mode]>=0&&raw.best[mode]<=864)data.best[mode]=raw.best[mode];
+      }
+      if(raw.daily&&typeof raw.daily==='object')for(const [date,record]of Object.entries(raw.daily)){
+        if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&record&&Number.isInteger(record.pairs)&&record.pairs>=0&&record.pairs<=864)data.daily[date]={pairs:record.pairs,cleared:record.cleared===true};
+      }
+    }
+  }catch{storageOK=false;}
+  let selected=null,hinted=[],rowsPerPage=3,historyPage=0,message='';
+  const game=()=>data.games[data.mode];
+  const ensure=mode=>{if(!data.games[mode])data.games[mode]=fresh(mode);};
+  MODES.forEach(ensure);
+  function record(mode,g){
+    data.best[mode]=Math.max(data.best[mode],g.pairs);
+    if(mode==='daily'){
+      const old=data.daily[g.date]||{pairs:0,cleared:false};
+      data.daily[g.date]={pairs:Math.max(old.pairs,g.pairs),cleared:old.cleared||g.phase==='cleared'};
+    }
+  }
+  function save(){
+    try{localStorage.setItem(KEY,JSON.stringify(data));storageOK=true;}catch{storageOK=false;}
+    $('storage-note').textContent=storageOK?(testing?'診断用の保存領域':'この端末に自動保存'):'保存不可・この画面のみ';
+  }
+  function synchronize(){
+    let changed=false;
+    const timed=data.games.time;
+    if(timed.phase==='playing'&&Date.now()>=timed.deadline){timed.phase='ended';timed.undo=null;record('time',timed);changed=true;if(data.mode==='time'){selected=null;hinted=[];message='';}}
+    if(data.games.daily.date!==today()){
+      record('daily',data.games.daily);data.games.daily=fresh('daily');changed=true;
+      if(data.mode==='daily'){selected=null;hinted=[];message='新しい日付の盤面になりました。';}
+    }
+    if(changed)save();return changed;
+  }
+  const pageSize=()=>rowsPerPage*9;
+  const pages=()=>Math.max(1,Math.ceil(game().board.length/pageSize()));
+  function updateClock(){
+    if(data.mode!=='time')return;
+    const g=game(),seconds=g.phase==='ready'?180:Math.max(0,Math.ceil(((g.deadline||Date.now())-Date.now())/1000));
+    $('detail').textContent=`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+    $('detail').classList.toggle('urgent',seconds<=20&&g.phase==='playing');
+  }
+  function render(){
+    const g=game();g.page=Math.max(0,Math.min(g.page,pages()-1));
+    document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===data.mode)));
+    $('score').textContent=g.pairs;
+    $('score-label').textContent=data.mode==='daily'?`${g.date} · 消したペア`:'消したペア';
+    $('detail-label').textContent=data.mode==='time'?`残り時間 · ベスト ${data.best.time}ペア`:'ベスト（ペア）';
+    $('detail').classList.remove('urgent');$('detail').textContent=data.best[data.mode];updateClock();
+    const start=g.page*pageSize(),end=Math.min(start+pageSize(),g.board.length),fragment=document.createDocumentFragment();
+    for(let i=start;i<end;i++){
+      const n=g.board[i],cell=document.createElement(n===null?'span':'button');
+      cell.className='cell'+(n===null?' empty':'')+(selected===i?' selected':'')+(hinted.includes(i)?' hinted':'');
+      if(n!==null){cell.textContent=n;cell.dataset.index=i;cell.setAttribute('aria-label',`${Math.floor(i/9)+1}行${i%9+1}列、${n}${hinted.includes(i)?'、ヒント':''}`);cell.setAttribute('aria-pressed',String(selected===i));cell.disabled=g.phase!=='playing';}
+      else cell.setAttribute('aria-hidden','true');
+      fragment.append(cell);
+    }
+    $('board').replaceChildren(fragment);$('empty-board').hidden=g.board.length!==0;
+    $('page-label').textContent=`${g.page+1} / ${pages()} ページ · ${g.board.filter(v=>v!==null).length}個`;
+    $('prev').disabled=g.page===0;$('next').disabled=g.page>=pages()-1;
+    $('add-label').textContent=`追加 ${5-g.used}`;$('add').setAttribute('aria-label',`残った数字を追加、残り${5-g.used}回`);
+    $('add').disabled=g.phase!=='playing'||g.used>=5;
+    $('hint').disabled=g.phase!=='playing';
+    $('undo').disabled=!g.undo||!['playing','cleared'].includes(g.phase);
+    $('restart').textContent=g.phase==='ready'?'3分を開始':'はじめから';
+    let status=message;
+    if(g.phase==='cleared')status=`クリア！ ${g.pairs}ペアを消しました。`;
+    else if(g.phase==='ended')status=`時間終了！ 記録は${g.pairs}ペア。`;
+    else if(g.phase==='ready')status='「3分を開始」でスタート。';
+    else if(!status&&selected!==null)status=`${g.board[selected]}を選択中（${Math.floor(selected/9)+1}行${selected%9+1}列）。相手を選ぼう。`;
+    else if(!status&&!Rules.findPair(g.board))status=g.used<5?'消せるペアがありません。＋で数字を追加。':'消せるペアがありません。1手戻すか、はじめから。';
+    $('status').textContent=status||'同じ数字、または足して10を選ぼう。';
+  }
+  function active(){if(synchronize())render();return game().phase==='playing';}
+  function snapshot(){const g=game();g.undo={...g,board:g.board.slice(),undo:null};}
+  function finishMove(){
+    const g=game();selected=null;hinted=[];message='';
+    if(!g.board.length)g.phase='cleared';
+    record(data.mode,g);render();save();
+  }
+  $('board').addEventListener('click',event=>{
+    const cell=event.target.closest('button[data-index]');if(!cell||!active())return;
+    const index=Number(cell.dataset.index),g=game();if(g.board[index]==null)return;
+    message='';
+    if(selected===index){selected=null;render();return;}
+    if(selected===null){selected=index;render();return;}
+    if(Rules.canMatch(g.board,selected,index)){
+      snapshot();g.board=Rules.removePair(g.board,selected,index);g.pairs++;finishMove();
+      $('board').classList.remove('cleared');void $('board').offsetWidth;$('board').classList.add('cleared');
+      try{if(typeof navigator.vibrate==='function')navigator.vibrate(12);}catch{}
+    }else{selected=index;hinted=[];message='そのペアは消せません。いま選んだ数字から続けよう。';render();}
+  });
+  $('add').onclick=()=>{if(!active()||game().used>=5)return;snapshot();const next=Rules.addNumbers(game().board,game().used);game().board=next.board;game().used=next.used;game().page=Math.floor((game().board.length-1)/pageSize());finishMove();};
+  $('undo').onclick=()=>{
+    synchronize();const g=game();if(!g.undo||!['playing','cleared'].includes(g.phase)){render();return;}
+    const deadline=g.deadline;data.games[data.mode]={...g.undo,undo:null,deadline};selected=null;hinted=[];message='直前の1手を戻しました。時間は戻りません。';render();save();
+  };
+  $('hint').onclick=()=>{
+    if(!active())return;const pair=Rules.findPair(game().board);selected=null;hinted=pair||[];
+    if(pair){game().page=Math.floor(pair[0]/pageSize());const p=pair.map(i=>Math.floor(i/pageSize())+1);message=p[0]===p[1]?'枠のついたふたつが消せます。':`ヒントは${p[0]}・${p[1]}ページ。選択したまま次のページへ。`;}
+    else message=game().used<5?'ペアがありません。＋で数字を追加。':'ペアがありません。1手戻すか、はじめから。';
+    render();save();
+  };
+  function turnPage(delta){synchronize();game().page=Math.max(0,Math.min(pages()-1,game().page+delta));message='';render();save();}
+  $('prev').onclick=()=>turnPage(-1);$('next').onclick=()=>turnPage(1);
+  document.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>{synchronize();data.mode=button.dataset.mode;selected=null;hinted=[];message='';render();save();});
+  $('restart').onclick=()=>{
+    synchronize();if(game().phase==='ready'){game().phase='playing';game().deadline=Date.now()+180000;message='';render();save();}
+    else $('restart-dialog').showModal();
+  };
+  $('confirm-restart').onclick=()=>{record(data.mode,game());data.games[data.mode]=fresh(data.mode);selected=null;hinted=[];message='';$('restart-dialog').close();render();save();};
+  $('help').onclick=()=>$('help-dialog').showModal();
+  document.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>button.closest('dialog').close());
+  function renderHistory(){
+    const entries=Object.entries(data.daily).sort((a,b)=>b[0].localeCompare(a[0]));
+    const count=Math.max(1,Math.ceil(entries.length/5));historyPage=Math.max(0,Math.min(count-1,historyPage));
+    $('history-list').replaceChildren();
+    if(!entries.length){const p=document.createElement('p');p.textContent='まだ記録がありません。今日の盤面を遊んでみよう。';$('history-list').append(p);}
+    for(const [date,record]of entries.slice(historyPage*5,historyPage*5+5)){
+      const row=document.createElement('div');row.className='history-row';const label=document.createElement('span'),value=document.createElement('span');label.textContent=date;value.textContent=`${record.cleared?'クリア · ':''}${record.pairs}ペア`;row.append(label,value);$('history-list').append(row);
+    }
+    $('history-page').textContent=`${historyPage+1} / ${count}`;$('history-prev').disabled=historyPage===0;$('history-next').disabled=historyPage===count-1;
+  }
+  $('history').onclick=()=>{synchronize();historyPage=0;renderHistory();$('history-dialog').showModal();};
+  $('history-prev').onclick=()=>{historyPage--;renderHistory();};$('history-next').onclick=()=>{historyPage++;renderHistory();};
+  if(testing){
+    const result=window.__selftest();$('selftest').hidden=false;$('selftest').classList.toggle('failed',!result.pass);
+    const heading=document.createElement('strong');heading.textContent=result.pass?`全項目PASS · ${result.tests.length}/${result.tests.length}`:'自己診断 FAIL';$('selftest').append(heading);
+    const detail=document.createElement('span');detail.textContent=result.tests.map(t=>`${t.name}: ${t.pass?'PASS':'FAIL'}`).join(' / ');$('selftest').append(detail);
+  }
+  function resize(){
+    const oldStart=game().page*pageSize();const height=$('board-area').clientHeight;
+    rowsPerPage=Math.max(1,Math.floor(height/48));game().page=Math.floor(oldStart/pageSize());render();
+  }
+  new ResizeObserver(resize).observe($('board-area'));
+  window.addEventListener('pagehide',save);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{synchronize();render();}});
+  document.addEventListener('contextmenu',event=>event.preventDefault());
+  document.addEventListener('gesturestart',event=>event.preventDefault(),{passive:false});
+  document.addEventListener('touchmove',event=>{if(!event.target.closest('dialog'))event.preventDefault();},{passive:false});
+  document.addEventListener('dblclick',event=>event.preventDefault(),{passive:false});
+  const startURL=location.href.split(/[?#]/)[0];
+  $('manifest').href='data:application/manifest+json;charset=utf-8,'+encodeURIComponent(JSON.stringify({name:'ナンバーマッチ',short_name:'数字マッチ',lang:'ja',start_url:startURL,display:'standalone',background_color:'#f4f3ec',theme_color:'#226347'}));
+  synchronize();render();save();requestAnimationFrame(resize);
+  setInterval(()=>{if(synchronize())render();else updateClock();},250);
+})();
+</script>
+</body>
+</html>
