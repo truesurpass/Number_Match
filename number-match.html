@@ -26,7 +26,9 @@ button:active:not(:disabled){background:var(--soft)}
 header,.inset{padding:0 13px}
 header{display:flex;align-items:center;justify-content:space-between;min-height:52px;flex-shrink:0}
 h1{font-size:23px;letter-spacing:-.035em;margin:0;font-weight:750}
+.header-actions{display:flex;gap:4px}
 .help{border:1px solid var(--line);border-radius:50%;padding:0;width:44px;font-size:20px}
+#sound{border-radius:50%;padding:0;width:44px;font-size:18px}
 .modes{display:flex;border-bottom:1px solid var(--line);margin:0 13px;flex-shrink:0}
 .modes button{flex:1;font-size:13px;white-space:nowrap;padding:10px 2px;border-bottom:3px solid transparent}
 .modes button[aria-pressed=true]{border-bottom-color:var(--accent);color:var(--accent);font-weight:700}
@@ -39,15 +41,23 @@ h1{font-size:23px;letter-spacing:-.035em;margin:0;font-weight:750}
 .urgent{color:var(--danger)}
 .board-area{flex:1;min-height:144px;position:relative;overflow:hidden}
 .board{display:grid;grid-template-columns:repeat(9,minmax(44px,1fr));grid-auto-rows:var(--cell-h);align-content:start;width:100%}
-.cell{border-radius:0;padding:0;min-width:44px;height:var(--cell-h);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums;background:var(--surface);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.cell{border-radius:0;padding:0;min-width:44px;height:var(--cell-h);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums;background:var(--surface);border-right:1px solid var(--line);border-bottom:1px solid var(--line);transition:transform .1s ease,background-color .12s ease}
+.cell:active:not(:disabled){transform:scale(.86)}
+.cell.tapped{animation:tap-pop .18s ease-out}
 .cell:nth-child(9n){border-right:0}
 .cell.empty{background:transparent;position:relative}
 .cell.empty:after{content:"";width:3px;height:3px;border-radius:50%;background:var(--line);position:absolute;left:50%;top:50%}
 .cell.selected{background:var(--accent);color:var(--on-accent);font-weight:750;box-shadow:inset 0 0 0 3px var(--accent)}
 .cell.hinted{background:var(--hint);color:var(--hint-ink);box-shadow:inset 0 0 0 2px var(--hint-ink)}
 .cell.selected.hinted{background:var(--accent);color:var(--on-accent)}
-.board.cleared{animation:erase .18s ease-out}
-@keyframes erase{from{opacity:.6}to{opacity:1}}
+.board.cleared{animation:erase .22s ease-out}
+.effects{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3}
+.spark{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);animation:spark .48s cubic-bezier(.1,.7,.2,1) forwards}
+.confetti{position:absolute;top:35%;width:9px;height:14px;border-radius:2px;background:var(--hint);animation:confetti .9s cubic-bezier(.15,.65,.25,1) forwards}
+@keyframes tap-pop{0%{transform:scale(.82)}65%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes erase{0%{transform:scale(.97);filter:brightness(1.25)}100%{transform:scale(1);filter:none}}
+@keyframes spark{from{transform:translate(-50%,-50%) scale(1);opacity:1}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(0);opacity:0}}
+@keyframes confetti{0%{transform:translate(-50%,-20px) rotate(0);opacity:0}12%{opacity:1}100%{transform:translate(calc(-50% + var(--drift)),180px) rotate(var(--spin));opacity:0}}
 .empty-board{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:20px;pointer-events:none}
 .empty-board strong{font-size:32px;letter-spacing:-.03em}
 .empty-board p{font-size:14px;color:var(--muted)}
@@ -74,13 +84,13 @@ dialog .close{display:block;width:100%;background:var(--accent);color:var(--on-a
 .dialog-actions{display:flex;gap:8px;margin-top:16px}.dialog-actions button{flex:1;border:1px solid var(--line);border-radius:10px}
 .history-row{display:flex;justify-content:space-between;font-size:13px;padding:12px 0;border-bottom:1px solid var(--line)}
 @media(max-height:740px){.app{gap:5px}header{min-height:44px}.stats{min-height:54px}.stat-value{font-size:24px}.actions button{min-height:48px}h1{font-size:21px}}
-@media(prefers-reduced-motion:reduce){.board.cleared{animation:none}}
+@media(prefers-reduced-motion:reduce){.board.cleared,.cell.tapped,.spark,.confetti{animation:none}.effects{display:none}}
 </style>
 </head>
 <body>
 <main class="app">
   <section id="selftest" hidden aria-label="自己診断"></section>
-  <header><h1>ナンバーマッチ</h1><button id="help" class="help" aria-label="遊び方">?</button></header>
+  <header><h1>ナンバーマッチ</h1><div class="header-actions"><button id="sound" aria-label="効果音をオフ" aria-pressed="true">🔊</button><button id="help" class="help" aria-label="遊び方">?</button></div></header>
   <nav class="modes" aria-label="ゲームモード">
     <button data-mode="normal" aria-pressed="true">ノーマル</button>
     <button data-mode="time" aria-pressed="false">タイムアタック</button>
@@ -92,6 +102,7 @@ dialog .close{display:block;width:100%;background:var(--accent);color:var(--on-a
   </section>
   <div class="board-area" id="board-area">
     <div id="board" class="board" role="group" aria-label="9列の数字盤面"></div>
+    <div id="effects" class="effects" aria-hidden="true"></div>
     <div id="empty-board" class="empty-board" hidden><strong>クリア！</strong><p>すべての数字が、ぴったり。</p></div>
   </div>
   <nav class="page-nav" aria-label="盤面のページ"><button id="prev" aria-label="前のページ">前へ</button><span id="page-label"></span><button id="next" aria-label="次のページ">次へ</button></nav>
@@ -238,7 +249,35 @@ window.__selftest=Object.assign(runSelfTests,Rules,{run:runSelfTests});
       }
     }
   }catch{storageOK=false;}
-  let selected=null,hinted=[],rowsPerPage=3,historyPage=0,message='';
+  let selected=null,hinted=[],rowsPerPage=3,historyPage=0,message='',tapIndex=null,audio=null,soundEnabled=true;
+  try{soundEnabled=localStorage.getItem(`${KEY}.sound`)!=='off';}catch{}
+  function sound(notes,duration=.12,volume=.07){
+    if(!soundEnabled)return;
+    try{
+      const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;
+      audio??=new Audio();if(audio.state==='suspended')audio.resume();
+      const start=audio.currentTime+.008;
+      notes.forEach(([frequency,delay=0],index)=>{
+        const oscillator=audio.createOscillator(),gain=audio.createGain();
+        oscillator.type=index%2?'sine':'triangle';oscillator.frequency.setValueAtTime(frequency,start+delay);
+        gain.gain.setValueAtTime(.0001,start+delay);gain.gain.exponentialRampToValueAtTime(volume,start+delay+.012);gain.gain.exponentialRampToValueAtTime(.0001,start+delay+duration);
+        oscillator.connect(gain).connect(audio.destination);oscillator.start(start+delay);oscillator.stop(start+delay+duration+.02);
+      });
+    }catch{}
+  }
+  const selectSound=()=>sound([[330]],.045,.025);
+  const matchSound=()=>sound([[523],[659,.055]],.14,.065);
+  const clearSound=()=>sound([[523],[659,.09],[784,.18],[1047,.29]],.28,.075);
+  function updateSoundButton(){const button=$('sound');button.textContent=soundEnabled?'🔊':'🔇';button.setAttribute('aria-pressed',String(soundEnabled));button.setAttribute('aria-label',`効果音を${soundEnabled?'オフ':'オン'}`);}
+  function burst(point,cleared=false){
+    const layer=$('effects'),count=cleared?28:10;
+    for(let i=0;i<count;i++){
+      const bit=document.createElement('i');bit.className=cleared?'confetti':'spark';
+      if(cleared){bit.style.left=`${8+Math.random()*84}%`;bit.style.setProperty('--drift',`${-45+Math.random()*90}px`);bit.style.setProperty('--spin',`${180+Math.random()*540}deg`);bit.style.background=i%3===0?'var(--accent)':i%3===1?'var(--hint)':'var(--danger)';bit.style.animationDelay=`${Math.random()*.2}s`;}
+      else{const angle=Math.PI*2*i/count,distance=28+Math.random()*22;bit.style.left=`${point.x}px`;bit.style.top=`${point.y}px`;bit.style.setProperty('--dx',`${Math.cos(angle)*distance}px`);bit.style.setProperty('--dy',`${Math.sin(angle)*distance}px`);}
+      layer.append(bit);setTimeout(()=>bit.remove(),cleared?1200:600);
+    }
+  }
   const game=()=>data.games[data.mode];
   const ensure=mode=>{if(!data.games[mode])data.games[mode]=fresh(mode);};
   MODES.forEach(ensure);
@@ -281,12 +320,12 @@ window.__selftest=Object.assign(runSelfTests,Rules,{run:runSelfTests});
     const start=g.page*pageSize(),end=Math.min(start+pageSize(),g.board.length),fragment=document.createDocumentFragment();
     for(let i=start;i<end;i++){
       const n=g.board[i],cell=document.createElement(n===null?'span':'button');
-      cell.className='cell'+(n===null?' empty':'')+(selected===i?' selected':'')+(hinted.includes(i)?' hinted':'');
+      cell.className='cell'+(n===null?' empty':'')+(selected===i?' selected':'')+(hinted.includes(i)?' hinted':'')+(tapIndex===i?' tapped':'');
       if(n!==null){cell.textContent=n;cell.dataset.index=i;cell.setAttribute('aria-label',`${Math.floor(i/9)+1}行${i%9+1}列、${n}${hinted.includes(i)?'、ヒント':''}`);cell.setAttribute('aria-pressed',String(selected===i));cell.disabled=g.phase!=='playing';}
       else cell.setAttribute('aria-hidden','true');
       fragment.append(cell);
     }
-    $('board').replaceChildren(fragment);$('empty-board').hidden=g.board.length!==0;
+    $('board').replaceChildren(fragment);tapIndex=null;$('empty-board').hidden=g.board.length!==0;
     $('page-label').textContent=`${g.page+1} / ${pages()} ページ · ${g.board.filter(v=>v!==null).length}個`;
     $('prev').disabled=g.page===0;$('next').disabled=g.page>=pages()-1;
     $('add-label').textContent=`追加 ${5-g.used}`;$('add').setAttribute('aria-label',`残った数字を追加、残り${5-g.used}回`);
@@ -311,15 +350,17 @@ window.__selftest=Object.assign(runSelfTests,Rules,{run:runSelfTests});
   }
   $('board').addEventListener('click',event=>{
     const cell=event.target.closest('button[data-index]');if(!cell||!active())return;
-    const index=Number(cell.dataset.index),g=game();if(g.board[index]==null)return;
+    const index=Number(cell.dataset.index),g=game();if(g.board[index]==null)return;tapIndex=index;
     message='';
-    if(selected===index){selected=null;render();return;}
-    if(selected===null){selected=index;render();return;}
+    if(selected===index){selectSound();selected=null;render();return;}
+    if(selected===null){selectSound();selected=index;render();return;}
     if(Rules.canMatch(g.board,selected,index)){
-      snapshot();g.board=Rules.removePair(g.board,selected,index);g.pairs++;finishMove();
+      const first=$(`board`).querySelector(`[data-index="${selected}"]`),area=$('board-area').getBoundingClientRect(),a=first?.getBoundingClientRect(),b=cell.getBoundingClientRect();
+      const point={x:((a?.left??b.left)+b.left+(a?.width??b.width)/2+b.width/2)/2-area.left,y:((a?.top??b.top)+b.top+(a?.height??b.height)/2+b.height/2)/2-area.top};
+      snapshot();g.board=Rules.removePair(g.board,selected,index);g.pairs++;const cleared=g.board.length===0;cleared?clearSound():matchSound();finishMove();burst(point);if(cleared)burst(point,true);
       $('board').classList.remove('cleared');void $('board').offsetWidth;$('board').classList.add('cleared');
       try{if(typeof navigator.vibrate==='function')navigator.vibrate(12);}catch{}
-    }else{selected=index;hinted=[];message='そのペアは消せません。いま選んだ数字から続けよう。';render();}
+    }else{selectSound();selected=index;hinted=[];message='そのペアは消せません。いま選んだ数字から続けよう。';render();}
   });
   $('add').onclick=()=>{if(!active()||game().used>=5)return;snapshot();const next=Rules.addNumbers(game().board,game().used);game().board=next.board;game().used=next.used;game().page=Math.floor((game().board.length-1)/pageSize());finishMove();};
   $('undo').onclick=()=>{
@@ -343,6 +384,7 @@ window.__selftest=Object.assign(runSelfTests,Rules,{run:runSelfTests});
   };
   $('confirm-restart').onclick=()=>{record(data.mode,game());data.games[data.mode]=fresh(data.mode);selected=null;hinted=[];message='';$('restart-dialog').close();render();save();};
   $('help').onclick=()=>$('help-dialog').showModal();
+  $('sound').onclick=()=>{soundEnabled=!soundEnabled;try{localStorage.setItem(`${KEY}.sound`,soundEnabled?'on':'off');}catch{}updateSoundButton();if(soundEnabled)selectSound();};
   document.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>button.closest('dialog').close());
   function renderHistory(){
     const entries=Object.entries(data.daily).sort((a,b)=>b[0].localeCompare(a[0]));
@@ -374,7 +416,7 @@ window.__selftest=Object.assign(runSelfTests,Rules,{run:runSelfTests});
   document.addEventListener('dblclick',event=>event.preventDefault(),{passive:false});
   const startURL=location.href.split(/[?#]/)[0];
   $('manifest').href='data:application/manifest+json;charset=utf-8,'+encodeURIComponent(JSON.stringify({name:'ナンバーマッチ',short_name:'数字マッチ',lang:'ja',start_url:startURL,display:'standalone',background_color:'#f4f3ec',theme_color:'#226347'}));
-  synchronize();render();save();requestAnimationFrame(resize);
+  updateSoundButton();synchronize();render();save();requestAnimationFrame(resize);
   setInterval(()=>{if(synchronize())render();else updateClock();},250);
 })();
 </script>
